@@ -5,6 +5,8 @@ const chatWindow = document.getElementById("chatWindow");
 const chatMessages = document.getElementById("chatMessages");
 const chatEmptyState = document.getElementById("chatEmptyState");
 const sendBtn = document.getElementById("sendBtn");
+const chatMemorySummary = document.getElementById("chatMemorySummary");
+const chatMemoryList = document.getElementById("chatMemoryList");
 
 // Read the worker URL from local non-secret config.
 const workerUrl =
@@ -37,6 +39,9 @@ REMINDER:
 const conversationHistory = [
   { role: "system", content: shoppingAssistantInstructions },
 ];
+
+const memoryEntries = [];
+let pendingArchiveEntries = null;
 
 // Keep the initial greeting and input visible, but clear any old messages.
 chatMessages.textContent = "";
@@ -76,6 +81,43 @@ function addChatMessage(role, text) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+function addMemoryEntry(role, text) {
+  if (!chatMemorySummary || !chatMemoryList) {
+    return;
+  }
+
+  memoryEntries.push({ role, text });
+  chatMemorySummary.setAttribute(
+    "aria-label",
+    `Chat memory (${memoryEntries.length} messages)`,
+  );
+
+  const memoryItem = document.createElement("p");
+  memoryItem.classList.add("memory-item");
+
+  const labelElement = document.createElement("strong");
+  const label = role === "user" ? "You" : "Assistant";
+  labelElement.textContent = `${label}: `;
+  memoryItem.appendChild(labelElement);
+  memoryItem.appendChild(document.createTextNode(text));
+
+  chatMemoryList.appendChild(memoryItem);
+  chatMemoryList.scrollTop = chatMemoryList.scrollHeight;
+}
+
+function archiveSearchToMemory(entries) {
+  for (const entry of entries) {
+    addMemoryEntry(entry.role, entry.text);
+  }
+
+  // Once a search is complete, move it to memory and clear the chat view.
+  chatMessages.textContent = "";
+  chatWindow.classList.remove("has-messages");
+  if (chatEmptyState) {
+    chatEmptyState.hidden = false;
+  }
+}
+
 /* Handle form submit */
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -86,11 +128,19 @@ chatForm.addEventListener("submit", async (e) => {
     return;
   }
 
+  // Move the previous completed search to memory only when a new search starts.
+  if (pendingArchiveEntries) {
+    archiveSearchToMemory(pendingArchiveEntries);
+    pendingArchiveEntries = null;
+  }
+
   // Show the user's message immediately.
   showConversationState();
   addChatMessage("user", messageText);
   userInput.value = "";
   updateSendButtonState();
+
+  const completedSearchEntries = [{ role: "user", text: messageText }];
 
   // Show a temporary loading message while waiting for the API.
   const loadingMessage = document.createElement("div");
@@ -103,16 +153,17 @@ chatForm.addEventListener("submit", async (e) => {
     // Add the user message to conversation history before sending.
     conversationHistory.push({ role: "user", content: messageText });
 
-    // Send a Chat Completions style payload to the Cloudflare Worker.
-    // The worker handles the secure API key and forwards to OpenAI.
+    // Build the messages array sent to the worker.
+    const messages = conversationHistory;
+
+    // Send a POST request to your Cloudflare Worker.
     const response = await fetch(workerUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4.1",
-        messages: conversationHistory,
+        messages: messages,
       }),
     });
 
@@ -131,14 +182,19 @@ chatForm.addEventListener("submit", async (e) => {
     // Remove loading text and show the real assistant reply.
     loadingMessage.remove();
     addChatMessage("assistant", aiReply);
+    completedSearchEntries.push({ role: "assistant", text: aiReply });
 
     // Save assistant reply so future messages keep context.
     conversationHistory.push({ role: "assistant", content: aiReply });
+
+    // Keep this completed search visible for now.
+    // It moves to memory when the next search is submitted.
+    pendingArchiveEntries = completedSearchEntries;
   } catch (error) {
     loadingMessage.remove();
-    addChatMessage(
-      "assistant",
-      "Something went wrong. Please try again in a moment.",
-    );
+    const errorText = "Something went wrong. Please try again in a moment.";
+    addChatMessage("assistant", errorText);
+    completedSearchEntries.push({ role: "assistant", text: errorText });
+    pendingArchiveEntries = completedSearchEntries;
   }
 });
