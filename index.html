@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -19,37 +19,44 @@
     <div class="page-wrapper">
       <!------- Header / Branding ------->
       <header class="site-header">
+        <img src="img/loreal-logo.png" alt="L'Oréal" class="brand-logo" />
         <h1 class="site-title">Smart Product Advisor</h1>
+        <p class="site-subtitle">Beauty intelligence, tailored to you.</p>
       </header>
 
       <!------- Chat Area ------->
       <main>
         <section class="chatbox">
           <div id="chatWindow" class="chat-window">
-            <!-- messages will be appended here via JS -->
-          </div>
+            <div id="chatEmptyState" class="chat-empty-state">
+              <p class="chat-helper">
+                Ask about makeup, skincare, haircare, fragrance, or routines.
+              </p>
+            </div>
+            <div id="chatMessages" class="chat-messages"></div>
 
-          <form id="chatForm" class="chat-form">
-            <label for="userInput" class="visually-hidden">Message</label>
-            <input
-              id="userInput"
-              name="userInput"
-              type="text"
-              placeholder="Ask me about products or routines…"
-              autocomplete="off"
-              required
-            />
-            <button type="submit" id="sendBtn">
-              <span class="material-icons">send</span>
-              <span class="visually-hidden">Send</span>
-            </button>
-          </form>
+            <form id="chatForm" class="chat-form">
+              <label for="userInput" class="visually-hidden">Message</label>
+              <input
+                id="userInput"
+                name="userInput"
+                type="text"
+                placeholder="Hello, how can I help you today?"
+                autocomplete="off"
+                required
+              />
+              <button type="submit" id="sendBtn" disabled>
+                <span class="material-icons">send</span>
+                <span class="visually-hidden">Send</span>
+              </button>
+            </form>
+          </div>
         </section>
       </main>
 
       <!------- Footer Links ------->
       <footer class="site-footer">
-        <p>&copy; 2025 Company Name. All rights reserved.</p>
+        <p>&copy; 2025 L'Oréal. All rights reserved.</p>
         <nav>
           <!-- These URLs are placeholders -->
           <a href="#">Privacy Policy</a>
@@ -59,6 +66,7 @@
       </footer>
     </div>
 
+    <script src="config.local.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
